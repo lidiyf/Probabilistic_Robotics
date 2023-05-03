@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: gym-navigation
+Version: 0.1.0
+Summary: Navigation Environment for OpenAI Gym
+Home-page: https://github.com/NickGeramanis/gym-navigation
+Author: Nick Geramanis
+Author-email: nickgeramanis@gmail.com
+License: GPLV3
+License-File: LICENSE
