@@ -10,3 +10,9 @@ To run Lidi's environment
    ```sh
    Python3 scripts/main.py
    ```
+
+To run Tina's environment
+1. pull tina's branch
+2. ```sh
+   python env.py
+   ```
