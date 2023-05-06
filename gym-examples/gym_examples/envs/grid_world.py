@@ -6,7 +6,7 @@ from gymnasium import spaces
 
 
 class GridWorldEnv(gym.Env):
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 25}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 70}
 
     def __init__(self, render_mode=None): #, size=20):
         #self.size = size  # The size of the square grid
@@ -39,9 +39,9 @@ class GridWorldEnv(gym.Env):
         I.e. 0 corresponds to "right", 1 to "up" etc.
         """
         self._action_to_direction = {
-            0: (0, 1, 0), #np.array([1, 0]),
-            1: (3, 3, 3), #np.array([0, 1]),
-            2: (3, 3, -3), #np.array([-1, 0]),
+            0: np.array([0, 1, 0]), #np.array([1, 0]),
+            1: np.array([3, 3, 3]), #np.array([0, 1]),
+            2: np.array([3, 3, -3]), #np.array([-1, 0]),
             #3: (0, 0, 0),
             #3: np.array([0, -1]),
         }
@@ -158,11 +158,11 @@ class GridWorldEnv(gym.Env):
         # np.cos(), np.sin(), 
         # Map the action (element of {0,1,2,3}) to the direction we walk in
 
-        direction = self._action_to_direction[action][:2]
-        if self._action_to_direction[action] != 0:
+        direction = self._action_to_direction[int(action)][:2]
+        if action != 0:
             direction = (int(direction[0]*np.cos(np.pi/180*self._agent_angle)), int(direction[1]*np.sin(np.pi/180*self._agent_angle)))
 
-        self._agent_angle = (self._agent_angle + self._action_to_direction[action][-1]) % 360
+        self._agent_angle = (self._agent_angle + self._action_to_direction[int(action)][-1]) % 360
 
 
         # We use `np.clip` to make sure we don't leave the grid
