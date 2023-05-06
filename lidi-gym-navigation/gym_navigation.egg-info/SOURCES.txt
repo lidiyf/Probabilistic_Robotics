@@ -1,4 +1,3 @@
-LICENSE
 README.md
 setup.py
 gym_navigation/__init__.py
