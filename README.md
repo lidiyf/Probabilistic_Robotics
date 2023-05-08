@@ -10,3 +10,6 @@ To run Lidi's environment
    ```sh
    Python3 scripts/main.py
    ```
+3. Files for PPO are at this link:
+   https://github.com/ericyangyu/PPO-for-Beginners
+   Add ppo_v1.py to this folder and run.
