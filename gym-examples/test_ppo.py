@@ -4,11 +4,13 @@ import gymnasium
 sys.modules["gym"] = gymnasium
 
 from stable_baselines3 import PPO
+from stable_baselines3 import A2C
 from stable_baselines3.common.policies import MultiInputActorCriticPolicy
 from stable_baselines3.common.monitor import Monitor
 
 env = gymnasium.make('gym_examples/GridWorld-v0', render_mode="human")
-model = PPO.load("ppo")
+#model = PPO.load("ppo")
+model = A2C.load("a2c")
 
 observation, info = env.reset()
 while True: #for _ in range(10000):

@@ -13,7 +13,7 @@ class GridWorldEnv(gym.Env):
     def __init__(self, render_mode=None): #, size=20):
         #self.size = size  # The size of the square grid
         self.window_size = 500 #512  # The size of the PyGame window
-        self.reward = 0
+        #self.reward = 0
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
@@ -34,7 +34,7 @@ class GridWorldEnv(gym.Env):
         )
 
         # We have 4 actions, corresponding to "right", "up", "left", "down"
-        self.action_space = spaces.Discrete(4)
+        self.action_space = spaces.Discrete(3)
 
         """
         The following dictionary maps abstract actions from `self.action_space` to
@@ -46,7 +46,7 @@ class GridWorldEnv(gym.Env):
             0: np.array([0.7, 0.7, 5]), #np.array([0, 1]),
             1: np.array([0.7, 0.7, -5]), #np.array([-1, 0]),
             2: np.array([0, 0, 0]),
-            3: np.array([0.6, 0.6, 0])
+            2: np.array([0.5, 0.5, 0])
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -86,7 +86,8 @@ class GridWorldEnv(gym.Env):
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
-        self.reward = 0
+        #self.reward = 0
+        self.success = False
         
         self._sensor_grid = self.np_random.integers(0, 1, size=171, dtype=int)
 
@@ -113,10 +114,10 @@ class GridWorldEnv(gym.Env):
             self._target_location[1] = self.np_random.integers(50, 100, size=1, dtype=int)
             self._agent_location[1] = self.np_random.integers(0, 1, size=1, dtype=int)
         elif self._target_side == 1:
-            self._target_location[0] = self.np_random.integers(self.window_size-50, self.window_size, size=1, dtype=int)
+            self._target_location[0] = self.np_random.integers(self.window_size-100, self.window_size-50, size=1, dtype=int)
             self._agent_location[0] = self.np_random.integers(self.window_size-20, self.window_size-20+1, size=1, dtype=int)
         elif self._target_side == 2:
-            self._target_location[1] = self.np_random.integers(self.window_size-50, self.window_size, size=1, dtype=int)
+            self._target_location[1] = self.np_random.integers(self.window_size-100, self.window_size-50, size=1, dtype=int)
             self._agent_location[1] = self.np_random.integers(self.window_size-20, self.window_size-20+1, size=1, dtype=int)
         elif self._target_side ==3:
             self._target_location[0] = self.np_random.integers(50, 100, size=1, dtype=int)
@@ -309,7 +310,7 @@ class GridWorldEnv(gym.Env):
         #print(self._sensor_grid)
         self._pre_goal = int(self._goal[0])
 
-        if np.linalg.norm(self._agent_location - self._target_location) <= 200 and abs(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360)) <= 75:
+        if np.linalg.norm(self._agent_location - self._target_location) <= 200 and abs(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360)) <= 80:
             #self._goal = np.array(np.linalg.norm(self._agent_location - self._target_location), dtype=int)
             self._goal[0] = int(np.linalg.norm(self._agent_location - self._target_location))
 
@@ -326,12 +327,16 @@ class GridWorldEnv(gym.Env):
         self._goal_angle = np.array([int(abs(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360)))])
         #print(self._goal_angle)
 
+        success = False
         # An episode is done iff the agent has reached the target
         #terminated = np.array_equal(self._agent_location, self._target_location)
         if self._goal == 0:
             terminated = True
+
         elif (self._target_location[0] == 0 or self._target_location[1] == 0 or self._target_location[0] == self.window_size-20 or self._target_location[1] == self.window_size-20) and np.linalg.norm(self._agent_location - self._target_location) <= 50 and self._goal > 0:
             #print("completed", self._target_location)
+            success = True
+            #print("success!", self._target_location)
             terminated = True
             #print("target location", self._target_location)
             #print("distance to agent", np.linalg.norm(self._agent_location - self._target_location))
@@ -340,24 +345,29 @@ class GridWorldEnv(gym.Env):
         #    terminated = True
         else:
             terminated = False
-        reward = self.calc_rewards(terminated) #1 if terminated else 0  # Binary sparse rewards
+        reward = self.calc_rewards(success, terminated) #1 if terminated else 0  # Binary sparse rewards
         #print(reward)
         #print(self._angle_to_center)
         observation = self._get_obs()
         info = self._get_info()
 
+        '''
         if terminated:
             with open('follow.csv', 'a') as f:
                 w = writer(f)
                 w.writerow([self._count])
                 f.close()
+            with open('reward.csv', 'a') as f:
+                w = writer(f)
+                w.writerow([reward])
+                f.close()'''
 
         if self.render_mode == "human":
             self._render_frame()
 
         return observation, reward, terminated, False, info
     
-    def calc_rewards(self, term):
+    def calc_rewards(self, succ, term):
         #if term:
         #    self.reward += 50 
             #print("+ terminated")
@@ -378,38 +388,46 @@ class GridWorldEnv(gym.Env):
             #elif (self._agent_location[0] <= 30 or self._agent_location[0] >= self.window_size-30 or self._agent_location[1] <= 30 or self._agent_location[1] >= self.window_size-30) and (self._agent_angle%90 <= 20 or self._agent_angle%90 >= 70):
             #    self.reward += -25
         #elif self._goal >= 0:
-        if not term:
+        #if not term:
             #if self._dgoal < 0:
             #    self.reward += 2
                     #print("+ closer")
-            self.reward += 1
-            self.reward += self._collision()  
-        if term:
-            self.reward += self._count
-        return self.reward
+        #    self.reward += 1
+        #    self.reward += self._collision()  
+        #if term:
+        #    self.reward += self._count
+        ret = 0
+        if not term and self._goal_angle <= 30:
+            ret += 5
+            ret += self._collision()
+        elif succ:
+            ret += 200
+        else:
+            ret += -500
+        return ret
 
     def _collision(self):
         ret = 0
         if np.linalg.norm(self.center - (self._pedestrian_location+10)) <= (10 + 14):
-            ret += -100
+            ret = -100
         elif np.linalg.norm(self.center - (self._pedestrian_location+10)) <= (10 + 14 + 3):
-            ret += -50  
+            ret = -10
         if np.linalg.norm(self.center - (self._pedestrian2_location+10)) <= (10 + 14):
-            ret += -100
+            ret = -100
         elif np.linalg.norm(self._agent_location - (self._pedestrian2_location+10)) <= (10 + 14 + 3):
-            ret += -50  
+            ret = -10
         if np.linalg.norm(self._agent_location - (self._static_location+35/2)) <= (10 + 24):
-            ret += -100
+            ret = -100
         elif np.linalg.norm(self._agent_location - (self._static_location+35/2)) <= (10 + 24 + 3):
-            ret += -50  
+            ret = -10
         if np.linalg.norm(self._agent_location - (self._static2_location+35/2)) <= (10 + 24):
-            ret += -100
+            ret = -100
         elif np.linalg.norm(self._agent_location - (self._static2_location+35/2)) <= (10 + 24 + 3):
-            ret += -50  
+            ret = -10
         if np.linalg.norm(self._agent_location - (self._static3_location+35/2)) <= (10 + 24):
-            ret += -100
+            ret = -100
         elif np.linalg.norm(self._agent_location - (self._static3_location+35/2)) <= (10 + 24 + 3):
-            ret += -50    
+            ret = -10 
         #print("0 no collision")
         return ret
     
@@ -471,7 +489,6 @@ class GridWorldEnv(gym.Env):
         
         #orig = (center[0], center[1]-10)
         #orig2 = (orig[0], orig[1]-50)
-
         pygame.draw.rect(
             canvas,
             (0,0,0),
