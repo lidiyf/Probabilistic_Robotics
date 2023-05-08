@@ -40,9 +40,8 @@ class GridWorldEnv(gym.Env):
         """
         self._action_to_direction = {
             0: np.array([0, 1, 0]), #np.array([1, 0]),
-            1: np.array([3, 3, 3]), #np.array([0, 1]),
-            2: np.array([3, 3, -3]), #np.array([-1, 0]),
-            #3: (0, 0, 0),
+            1: np.array([2, 2, 2]), #np.array([0, 1]),
+            2: np.array([2, 2, -2]), #np.array([-1, 0]),
             #3: np.array([0, -1]),
         }
 
@@ -89,33 +88,55 @@ class GridWorldEnv(gym.Env):
         # render no overlap and inside the frame
         self._static_location = self.np_random.integers(0, self.window_size - 35, size=2, dtype=int)
         self._static2_location = self.np_random.integers(0, self.window_size - 35, size=2, dtype=int)
+        while np.linalg.norm(self._static2_location - self._static_location) <= 80:
+            self._static2_location = self.np_random.integers(0, self.window_size - 35, size=2, dtype=int)
         self._static3_location = self.np_random.integers(0, self.window_size - 35, size=2, dtype=int)
+        while np.linalg.norm(self._static3_location - self._static_location) <= 80 or np.linalg.norm(self._static3_location - self._static2_location) <= 80:
+            self._static3_location = self.np_random.integers(0, self.window_size - 35, size=2, dtype=int)
 
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.integers(0, self.window_size, size=2, dtype=int)
-        self._agent_angle = self.np_random.integers(0, 361, size=1, dtype=int)
+        #self._agent_location = self.np_random.integers(0, self.window_size, size=2, dtype=int)
+        #self._agent_angle = self.np_random.integers(0, 361, size=1, dtype=int)
+        self._target_location = self.np_random.integers(self.window_size/2-150, self.window_size/2+150, size=2, dtype=int) #self.np_random.integers(0, self.window_size, size=2, dtype=int)
+        #self._pedestrian_location = self.np_random.integers(0, self.window_size, size=2, dtype=int)
+        #self._pedestrian2_location = self.np_random.integers(0, self.window_size, size=2, dtype=int)
 
-        self._calc_angle((self._agent_location + 10), self._agent_angle * np.pi / 180-5*np.pi/12)
+        self._target_side = np.random.choice(range(4), 1)
+        if self._target_side == 0:
+            self._target_location[1] = self.np_random.integers(0, 100, size=1, dtype=int)
+        elif self._target_side == 1:
+            self._target_location[0] = self.np_random.integers(self.window_size-100, self.window_size, size=1, dtype=int)
+        elif self._target_side == 2:
+            self._target_location[1] = self.np_random.integers(self.window_size-100, self.window_size, size=1, dtype=int)
+        elif self._target_side ==3:
+            self._target_location[0] = self.np_random.integers(0, 100, size=1, dtype=int)
 
-        self.center = (self._agent_location + 10)
-        self.radian = self._agent_angle * np.pi / 180
+        self._pedestrian_location = self.gen_ped(self._target_side)
+        self._pedestrian2_location = self.gen_ped2(self._target_side)
+        #self._pedestrian_direction = -(self._pedestrian_location[1] - self.window_size/2) / (self._pedestrian_location[0] - self.window_size/2)
+        #self._calc_angle((self._agent_location + 10), self._agent_angle * np.pi / 180-5*np.pi/12)
+
         # We will sample the target's location randomly until it does not coincide with the agent's location
-        self._target_location = self._agent_location + self.np_random.integers(-20, 20, size=2, dtype=int)
-        while np.linalg.norm(self._agent_location - self._target_location) >= 170 or np.linalg.norm(self._agent_location - self._target_location) <= 10  or abs(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360)) >= 65:
-            self._target_location = self._agent_location + self.np_random.integers(-20, 20, size=2, dtype=int)
+        self._agent_location = self._target_location + self.np_random.integers(-20, 20, size=2, dtype=int)
+        while np.linalg.norm(self._agent_location - self._target_location) >= 170 or np.linalg.norm(self._agent_location - self._target_location) <= 10:
+            self._agent_location = self._target_location + self.np_random.integers(-20, 20, size=2, dtype=int)
+        self.center = (self._agent_location + 10)
         # agent location or center?
-        
-        self._pedestrian_location = self.np_random.integers(0, self.window_size, size=2, dtype=int)
-        while np.array_equal(self._pedestrian_location, self._agent_location):
+        self._agent_angle = self.np_random.integers(0, 361, size=1, dtype=int)
+        while abs(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360)) >= 65:
+            self._agent_angle = self.np_random.integers(0, 361, size=1, dtype=int)
+        self.radian = self._agent_angle * np.pi / 180
+
+
+        '''while np.array_equal(self._pedestrian_location, self._agent_location):
             self._pedestrian_location = self.np_random.integers(
                 0, self.window_size, size=2, dtype=int
-            )
-        self._pedestrian2_location = self.np_random.integers(0, self.window_size, size=2, dtype=int)
-        while np.array_equal(self._pedestrian2_location, self._agent_location):
+            )'''
+        '''while np.array_equal(self._pedestrian2_location, self._agent_location):
             self._pedestrian2_location = self.np_random.integers(
                 0, self.window_size, size=2, dtype=int
-            )
+            )'''
         
         '''
         self._dist_to_name = {
@@ -125,6 +146,8 @@ class GridWorldEnv(gym.Env):
             3: "self._static2_location",
             4: "self._static3_location"
         }'''
+        self._p_i = int(np.random.choice([0,1], 1))
+        self._p_ip = int(np.random.choice([0,1], 1))
 
         self._dist = [self._pedestrian_location, self._pedestrian2_location, self._static_location, self._static2_location, self._static3_location]
 
@@ -143,8 +166,12 @@ class GridWorldEnv(gym.Env):
                     else:
                         self._sensor_grid[75-int(diff)] = d
 
+        self._i1 = 0
+        self._i2 = 0
         self._goal = self.np_random.integers(0, 1, size=1, dtype=int)
         self._goal[0] = int(np.linalg.norm(self._agent_location - self._target_location))
+        #self._pre_goal = self._goal
+        self._count = 0
 
         observation = self._get_obs()
         info = self._get_info()
@@ -157,30 +184,84 @@ class GridWorldEnv(gym.Env):
     def step(self, action):
         # np.cos(), np.sin(), 
         # Map the action (element of {0,1,2,3}) to the direction we walk in
+        p = {
+            0:[0.5, 0.2, 0.3],
+            1:[0.3, 0.2, 0.5],
+        }
+        
+        rec = np.array(np.random.choice([-1, 0, 1], 1, p=p[self._p_i]))#self.np_random.integers(-1, 2, size=1, dtype=int)
+        dom = self.np_random.integers(0, 2, size=1, dtype=int)
+        self._target_direction = {
+            0: np.concatenate([rec, dom]),
+            1: np.concatenate([-1*dom, rec]),
+            2: np.concatenate([rec, -1*dom]),
+            3: np.concatenate([dom, rec]),
+        }
+
+        rec_ped = np.array(np.random.choice([-2, 0, 2], 1, p=p[self._p_ip]))#self.np_random.integers(-1, 2, size=1, dtype=int)
+        dom_ped = self.np_random.integers(0, 2, size=1, dtype=int)
+        self._ped_direction = {
+            0: np.concatenate([rec_ped, dom_ped]),
+            1: np.concatenate([-1*dom_ped, rec_ped]),
+            2: np.concatenate([rec_ped, -1*dom_ped]),
+            3: np.concatenate([dom_ped, rec_ped]),
+        }
 
         direction = self._action_to_direction[int(action)][:2]
         if action != 0:
             direction = (int(direction[0]*np.cos(np.pi/180*self._agent_angle)), int(direction[1]*np.sin(np.pi/180*self._agent_angle)))
 
+        self._pre_agent_location = [self._agent_location[0], self._agent_location[1]]
         self._agent_angle = (self._agent_angle + self._action_to_direction[int(action)][-1]) % 360
-
-
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location = np.clip(
             self._agent_location + direction, 0, self.window_size - 20
         )
+        self._dagent = np.linalg.norm(self._pre_agent_location - self._agent_location)
+        #print(self._dagent)
+
+        self._angle_to_center = abs(self._agent_angle - ((np.arctan2(self.window_size/2-self.center[1], self.window_size/2-self.center[0])*180/np.pi) % 360))
+        #print(self._angle_to_center)
 
         # change their walking behaviors
-        target_direction = np.array([1, 1])#self._action_to_direction[self.action_space.sample()][:2]
+        target_direction = self._target_direction[int(self._target_side)] #self._action_to_direction[self.action_space.sample()][:2]
+        if self._target_location[0] == 0 or self._target_location[1] == 0 or self._target_location[0] >= self.window_size-20 or self._target_location[1] >= self.window_size-20:
+            target_direction = np.array([0, 0]) #???
         self._target_location = np.clip(
             self._target_location + target_direction, 0, self.window_size - 20
         )
 
-        pedestrian_direction = self._action_to_direction[self.action_space.sample()][:2]
+        '''
+        
+            if self._i2 % 2 == 0:
+                if self._pedestrian_location[0] - self.window_size/2 > 0:
+                    rec_ped = np.array(np.random.choice([-2, 0, 2], 1, p=[0.8, 0.2, 0.]))
+                elif self._pedestrian_location[0] - self.window_size/2 < 0:
+                    rec_ped = np.array(np.random.choice([-2, 0, 2], 1, p=[0., 0.2, 0.8]))
+            else:
+                if self._pedestrian_location[1] - self.window_size/2 > 0:
+                    rec_ped = np.array(np.random.choice([-2, 0, 2], 1, p=[0.8, 0.2, 0.]))
+                elif self._pedestrian_location[1] - self.window_size/2 < 0:
+                    rec_ped = np.array(np.random.choice([-2, 0, 2], 1, p=[0., 0.2, 0.8]))
+            #self._pedestrian_location[]
+            #extra = (self._pedestrian_location[1] - self.window_size/2) / (self._pedestrian_location[0] - self.window_size/2) /4
+        if self._pedestrian_location[0] == 0 or self._pedestrian_location[1] == 0 or self._pedestrian_location[0] >= self.window_size-20 or self._pedestrian_location[1] >= self.window_size-20:
+            self._pedestrian_direction = (self._pedestrian_location[1] - self.window_size/2) / np.linalg.norm(self._pedestrian_direction - [self.window_size/2, self.window_size/2])
+        '''
+        if self.boundary(self._pedestrian_location, (int(self._target_side)+2+self._i1)%4):
+            self._p_pi = int(np.random.choice([0,1], 1))
+            self._pedestrian_location = self.gen_ped((int(self._target_side)+2+self._i1)%4)
+            self._i1 += 2
+        pedestrian_direction = self._ped_direction[(int(self._target_side)+2+self._i1)%4] #self._action_to_direction[self.action_space.sample()][:2]
         self._pedestrian_location = np.clip(
             self._pedestrian_location + pedestrian_direction, 0, self.window_size - 20
         )
-        pedestrian2_direction = self._action_to_direction[self.action_space.sample()][:2]
+
+        if self.boundary(self._pedestrian2_location, (int(self._target_side)+3+self._i2)%4):
+            self._p_pi = int(np.random.choice([0,1], 1))
+            self._pedestrian2_location = self.gen_ped((int(self._target_side)+3+self._i2)%4)
+            self._i2 += 2    
+        pedestrian2_direction = self._ped_direction[(int(self._target_side)+3+self._i2)%4] #self._action_to_direction[self.action_space.sample()][:2]
         self._pedestrian2_location = np.clip(
             self._pedestrian2_location + pedestrian2_direction, 0, self.window_size - 20
         )
@@ -206,20 +287,35 @@ class GridWorldEnv(gym.Env):
                     else:
                         self._sensor_grid[75-int(diff)] = d
 
+        self._pre_goal = int(self._goal[0])
+
         if np.linalg.norm(self._agent_location - self._target_location) <= 200 and abs(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360)) <= 95:
             #self._goal = np.array(np.linalg.norm(self._agent_location - self._target_location), dtype=int)
             self._goal[0] = int(np.linalg.norm(self._agent_location - self._target_location))
 
         else:
             self._goal[0] = 0
+        self._dgoal = int(self._goal[0]) - self._pre_goal
+
+        '''
+        if self._goal == 0 and (self._agent_angle%90 <= 20 or self._agent_angle%90 >= 70):
+            print(self._count)
+            self._count += 1'''
 
         # An episode is done iff the agent has reached the target
         #terminated = np.array_equal(self._agent_location, self._target_location)
-        if self._target_location[0] == 0 or self._target_location[1] == 0 or self._target_location[0] >= self.window_size-20 or self._target_location[1] >= self.window_size-20:
+        if (self._target_location[0] <= 0 or self._target_location[1] == 0 or self._target_location[0] >= self.window_size-20 or self._target_location[1] >= self.window_size-20) and np.linalg.norm(self._agent_location - self._target_location) <= 50 and self._goal > 0:
+            terminated = True
+            #print("target location", self._target_location)
+            #print("distance to agent", np.linalg.norm(self._agent_location - self._target_location))
+            #print("angle", abs(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360)))
+        elif abs(self._agent_location[0] - self._target_location[0]) <= 3 and abs(self._agent_location[1] - self._target_location[1]) <= 3:
             terminated = True
         else:
             terminated = False
-        reward = self.calc_rewards() #1 if terminated else 0  # Binary sparse rewards
+        reward = self.calc_rewards(terminated) #1 if terminated else 0  # Binary sparse rewards
+        #print(reward)
+        #print(self._angle_to_center)
         observation = self._get_obs()
         info = self._get_info()
 
@@ -228,38 +324,95 @@ class GridWorldEnv(gym.Env):
 
         return observation, reward, terminated, False, info
     
-    def _collision(self):
-        if np.linalg.norm(self._agent_location - (self._pedestrian_location+10)) <= (10 + 10):
-            return -25
-        elif np.linalg.norm(self._agent_location - (self._pedestrian_location+10)) <= (10 + 10 + 5):
-            return -5
-        if np.linalg.norm(self._agent_location - (self._pedestrian2_location+10)) <= (10 + 10):
-            return -25
-        elif np.linalg.norm(self._agent_location - (self._pedestrian2_location+10)) <= (10 + 10 + 5):
-            return -5
-        if np.linalg.norm(self._agent_location - (self._static_location+35/2)) <= (10 + 35/2):
-            return -25
-        elif np.linalg.norm(self._agent_location - (self._static_location+35/2)) <= (10 + 35/2 + 5):
-            return -5
-        if np.linalg.norm(self._agent_location - (self._static2_location+35/2)) <= (10 + 35/2):
-            return -25
-        elif np.linalg.norm(self._agent_location - (self._static2_location+35/2)) <= (10 + 35/2 + 5):
-            return -5
-        if np.linalg.norm(self._agent_location - (self._static3_location+35/2)) <= (10 + 35/2):
-            return -25
-        elif np.linalg.norm(self._agent_location - (self._static3_location+35/2)) <= (10 + 35/2 + 5):
-            return -5
-        return 0
-    
-    def calc_rewards(self):
-        if self._goal == 0:
-            self.reward = -50
+    def calc_rewards(self, term):
+        if term:
+            self.reward += 50 
+            #print("+ terminated")
+            return self.reward
+        if self._goal == 0 and (self._agent_location[0] <= 10 or self._agent_location[1] <= 10 or self._agent_location[0] >= self.window_size-30 or self._agent_location[1] >= self.window_size-30):
+            if self._angle_to_center <= 90 or self._angle_to_center >= 360-90:
+                self.reward += +1
+                #print("+ angle towards center", self._angle_to_center)
+            else: #elif self._angle_to_center >= 90 or self._angle_to_center >= 360-90:
+                self.reward += -1
+                #print("- angle outward")
+            #if (self._agent_location[0] <= 30 or self._agent_location[1] <= 30 or self._agent_location[0] >= self.window_size-30 or self._agent_location[1] >= self.window_size-30) and (self._angle_to_center <= 90 or self._angle_to_center >= 360-90):
+            #    self.reward += 7
+            #elif (self._agent_location[0] <= 30 or self._agent_location[1] <= 30 or self._agent_location[0] >= self.window_size-30 or self._agent_location[1] >= self.window_size-30) and (self._angle_to_center <= 180 or self._angle_to_center >= 360-180):
+            #    self.reward += 1
+            #elif np.linalg.norm(self._agent_location - [0, 0]) <= 3 or np.linalg.norm(self._agent_location - [0, self.window_size]) <= 23 or np.linalg.norm(self._agent_location - [self.window_size, 0]) <= 23 or np.linalg.norm(self._agent_location - [self.window_size, self.window_size]) <= 23:
+            #    self.reward += -35
+            #elif (self._agent_location[0] <= 30 or self._agent_location[0] >= self.window_size-30 or self._agent_location[1] <= 30 or self._agent_location[1] >= self.window_size-30) and (self._agent_angle%90 <= 20 or self._agent_angle%90 >= 70):
+            #    self.reward += -25
         elif self._goal >= 0:
+            if self._dgoal < 0:
+                self.reward += 5 
+                #print("+ closer")
             self.reward += 15
         
         self.reward += self._collision()
         
         return self.reward
+
+    def _collision(self):
+        if np.linalg.norm(self._agent_location - (self._pedestrian_location+10)) <= (20 + 20):
+            return -25
+        elif np.linalg.norm(self._agent_location - (self._pedestrian_location+10)) <= (20 + 20 + 5):
+            return -5
+        if np.linalg.norm(self._agent_location - (self._pedestrian2_location+10)) <= (20 + 20):
+            return -25
+        elif np.linalg.norm(self._agent_location - (self._pedestrian2_location+10)) <= (20 + 20 + 5):
+            return -5
+        if np.linalg.norm(self._agent_location - (self._static_location+35/2)) <= (20 + 35):
+            return -25
+        elif np.linalg.norm(self._agent_location - (self._static_location+35/2)) <= (20 + 35 + 5):
+            return -5
+        if np.linalg.norm(self._agent_location - (self._static2_location+35/2)) <= (20 + 35):
+            return -25
+        elif np.linalg.norm(self._agent_location - (self._static2_location+35/2)) <= (20 + 35 + 5):
+            return -5
+        if np.linalg.norm(self._agent_location - (self._static3_location+35/2)) <= (20 + 35):
+            return -25
+        elif np.linalg.norm(self._agent_location - (self._static3_location+35/2)) <= (20 + 35 + 5):
+            return -5
+        #print("0 no collision")
+        return 0
+    
+    def gen_ped(self, side):
+        ret = self.np_random.integers(self.window_size/2-150, self.window_size/2+150, size=2, dtype=int)
+
+        if side==0:
+            ret[1] = self.np_random.integers(self.window_size-100, self.window_size, size=1, dtype=int)     
+        elif side==1:
+            ret[0] = self.np_random.integers(0, 100, size=1, dtype=int)
+        elif side==2:
+            ret[1] = self.np_random.integers(0, 100, size=1, dtype=int)
+        elif side==3:
+            ret[0] = self.np_random.integers(self.window_size-100, self.window_size, size=1, dtype=int)
+        return ret
+
+    def gen_ped2(self, side):
+        ret = self.np_random.integers(self.window_size/2-150, self.window_size/2+150, size=2, dtype=int)
+
+        if side==0:
+            ret[0] = self.np_random.integers(0, 100, size=1, dtype=int)
+        elif side==1:
+            ret[1] = self.np_random.integers(0, 100, size=1, dtype=int)
+        elif side==2:
+            ret[0] = self.np_random.integers(self.window_size-100, self.window_size, size=1, dtype=int)
+        elif side==3:
+            ret[1] = self.np_random.integers(self.window_size-100, self.window_size, size=1, dtype=int)
+        return ret
+
+    def boundary(self, pos, side):
+        if side == 0:
+            return pos[1] >= self.window_size - 20
+        elif side == 1:
+            return pos[0] == 0
+        elif side == 2:
+            return pos[1] == 0
+        elif side == 3:
+            return pos[0] >= self.window_size - 20
 
     def render(self):
         if self.render_mode == "rgb_array":

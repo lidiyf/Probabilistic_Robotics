@@ -8,12 +8,8 @@ from stable_baselines3.common.policies import MultiInputActorCriticPolicy
 from stable_baselines3.common.monitor import Monitor
 
 env = gymnasium.make('gym_examples/GridWorld-v0', render_mode="human")
-env = Monitor(env, filename="result")
-model = PPO(MultiInputActorCriticPolicy, env, verbose=1)
-model.learn(total_timesteps=2500000)
-model.save("ppo_2m")
+model = PPO.load("ppo")
 
-'''
 observation, info = env.reset()
 while True: #for _ in range(10000):
     #action = env.action_space.sample()
@@ -25,5 +21,3 @@ while True: #for _ in range(10000):
         observation, info = env.reset()
 
     env.render()
-#env.close()
-'''
