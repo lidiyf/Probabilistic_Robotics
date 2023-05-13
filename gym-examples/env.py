@@ -12,8 +12,8 @@ from stable_baselines3.common.monitor import Monitor
 from tqdm.rich import trange, tqdm
 
 env = gymnasium.make('gym_examples/GridWorld-v0', render_mode="human")
-env = make_vec_env('gym_examples/GridWorld-v0', n_envs=2, monitor_dir="mon/")
-#env = Monitor(env, filename="result")
+#env = make_vec_env('gym_examples/GridWorld-v0', n_envs=2, monitor_dir="mon/")
+env = Monitor(env, filename="result")
 
 model = PPO(MultiInputActorCriticPolicy, env, verbose=1)
 #model = A2C(MultiInputActorCriticPolicy, env, verbose=1)

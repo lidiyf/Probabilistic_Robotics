@@ -118,7 +118,6 @@ class GridWorldEnv(gym.Env):
         if int(np.linalg.norm(self._agent_location - self._target_location)) < 201:
             self._goal[0] = int(np.linalg.norm(self._agent_location - self._target_location))
 
-        self._count = 0
         self._goal_angle = np.array([int(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360))])
 
         observation = self._get_obs()
@@ -218,8 +217,6 @@ class GridWorldEnv(gym.Env):
             self._goal[0] = 201
         #self._dgoal = int(self._goal[0]) - self._pre_goal
 
-        self._count += 1
-
         self._goal_angle = np.array([int(self._agent_angle - ((np.arctan2(self._target_location[1]-self.center[1], self._target_location[0]-self.center[0])*180/np.pi) % 360))])
 
         success = False
@@ -229,15 +226,7 @@ class GridWorldEnv(gym.Env):
             success = True
             terminated = True
         else:
-            terminated = False
-        
-        
-        if terminated:
-            with open('num_steps.csv', 'a') as f:
-                w = writer(f)
-                w.writerow([self._count])
-                f.close()
-        
+            terminated = False  
 
         reward = self.calc_rewards(success, terminated)
         observation = self._get_obs()
@@ -452,6 +441,7 @@ class GridWorldEnv(gym.Env):
             ret = -15
         elif np.linalg.norm(self._agent_location - (self._static3_location+35/2)) <= (10 + 24):
             ret = -25
+        
         return ret
     # generate pedestrian #1
     def gen_ped(self, side):
